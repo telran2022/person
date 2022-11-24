@@ -1,5 +1,10 @@
 package telran.java2022.person.service;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +14,7 @@ import telran.java2022.person.dto.AddressDto;
 import telran.java2022.person.dto.CityPopulationDto;
 import telran.java2022.person.dto.PersonDto;
 import telran.java2022.person.dto.PersonNotFoundException;
+import telran.java2022.person.model.Address;
 import telran.java2022.person.model.Person;
 
 @Service
@@ -32,44 +38,57 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public PersonDto removePerson(Integer id) {
-		// TODO Auto-generated method stub
-		return null;
+		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
+		personRepository.delete(person);
+		return modelMapper.map(person, PersonDto.class);
 	}
 
 	@Override
 	public PersonDto updatePersonName(Integer id, String name) {
-		// TODO Auto-generated method stub
-		return null;
+		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
+		person.setName(name);
+		personRepository.save(person);
+		return modelMapper.map(person, PersonDto.class);
 	}
 
 	@Override
 	public PersonDto updatePersonAddress(Integer id, AddressDto addressDto) {
-		// TODO Auto-generated method stub
-		return null;
+		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
+		person.setAddress(modelMapper.map(addressDto, Address.class));
+		personRepository.save(person);
+		return modelMapper.map(person, PersonDto.class);
 	}
 
 	@Override
 	public Iterable<PersonDto> findPersonsByCity(String city) {
-		// TODO Auto-generated method stub
-		return null;
+		return personRepository.findByAddressCity(city).stream()
+				.map(p -> modelMapper.map(p, PersonDto.class))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public Iterable<PersonDto> findPersonsByName(String name) {
-		// TODO Auto-generated method stub
-		return null;
+		return personRepository.findByName(name).stream()
+				.map(p -> modelMapper.map(p, PersonDto.class))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public Iterable<PersonDto> findPersonsBetweenAge(Integer minAge, Integer maxAge) {
-		// TODO Auto-generated method stub
-		return null;
+		LocalDate from = LocalDate.now().minusYears(maxAge);
+		LocalDate to = LocalDate.now().minusYears(minAge);
+		return personRepository.findByBirthDateBetween(from, to).stream()
+				.map(p -> modelMapper.map(p, PersonDto.class))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public Iterable<CityPopulationDto> getCitiesPopulation() {
-		// TODO Auto-generated method stub
-		return null;
+		Map<String, Long> population = StreamSupport.stream(personRepository.findAll().spliterator(), false)
+				.collect(Collectors.groupingBy(p -> p.getAddress().getCity(), Collectors.counting()));
+		return population.entrySet().stream()
+				.map(e -> new CityPopulationDto(e.getKey(), e.getValue()))
+				.collect(Collectors.toList());
 	}
 
 }
