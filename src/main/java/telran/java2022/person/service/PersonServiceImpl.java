@@ -7,6 +7,7 @@ import java.util.stream.StreamSupport;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import telran.java2022.person.dao.PersonRepository;
@@ -25,7 +26,11 @@ public class PersonServiceImpl implements PersonService {
 	final ModelMapper modelMapper;
 
 	@Override
+	@Transactional
 	public Boolean addPerson(PersonDto personDto) {
+		if(personRepository.existsById(personDto.getId())) {
+			return false;
+		}
 		personRepository.save(modelMapper.map(personDto, Person.class));
 		return true;
 	}
@@ -37,6 +42,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
+	@Transactional
 	public PersonDto removePerson(Integer id) {
 		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
 		personRepository.delete(person);
@@ -44,51 +50,50 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
+	@Transactional
 	public PersonDto updatePersonName(Integer id, String name) {
 		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
 		person.setName(name);
-		personRepository.save(person);
 		return modelMapper.map(person, PersonDto.class);
 	}
 
 	@Override
+	@Transactional
 	public PersonDto updatePersonAddress(Integer id, AddressDto addressDto) {
 		Person person = personRepository.findById(id).orElseThrow(() -> new PersonNotFoundException());
 		person.setAddress(modelMapper.map(addressDto, Address.class));
-		personRepository.save(person);
 		return modelMapper.map(person, PersonDto.class);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public Iterable<PersonDto> findPersonsByCity(String city) {
-		return personRepository.findByAddressCity(city).stream()
+		return personRepository.findByAddressCity(city)
 				.map(p -> modelMapper.map(p, PersonDto.class))
 				.collect(Collectors.toList());
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public Iterable<PersonDto> findPersonsByName(String name) {
-		return personRepository.findByName(name).stream()
+		return personRepository.findByName(name)
 				.map(p -> modelMapper.map(p, PersonDto.class))
 				.collect(Collectors.toList());
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public Iterable<PersonDto> findPersonsBetweenAge(Integer minAge, Integer maxAge) {
 		LocalDate from = LocalDate.now().minusYears(maxAge);
 		LocalDate to = LocalDate.now().minusYears(minAge);
-		return personRepository.findByBirthDateBetween(from, to).stream()
+		return personRepository.findByBirthDateBetween(from, to)
 				.map(p -> modelMapper.map(p, PersonDto.class))
 				.collect(Collectors.toList());
 	}
 
 	@Override
 	public Iterable<CityPopulationDto> getCitiesPopulation() {
-		Map<String, Long> population = StreamSupport.stream(personRepository.findAll().spliterator(), false)
-				.collect(Collectors.groupingBy(p -> p.getAddress().getCity(), Collectors.counting()));
-		return population.entrySet().stream()
-				.map(e -> new CityPopulationDto(e.getKey(), e.getValue()))
-				.collect(Collectors.toList());
+		return personRepository.getCitiesPopulation();
 	}
 
 }
