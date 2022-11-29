@@ -1,4 +1,4 @@
-package telran.java2022.person.dto;
+package telran.java2022.person.dto.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
